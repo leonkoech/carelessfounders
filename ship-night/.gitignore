@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# solana-setup resume cache (holds a devnet secret key)
+scripts/.setup-keys.json
+
 # vercel
 .vercel
 
