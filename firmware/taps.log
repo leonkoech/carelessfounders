@@ -1,0 +1,7 @@
+[2026-08-06 19:53:54] PN532 OK — IC=0x32 ver=1.6 support=0x07 port=/dev/ttyUSB0
+[2026-08-06 19:53:54] logging → /home/sherzoy-jan/Files/miami_hackathon/carelessfounders/firmware/taps.log
+[2026-08-06 19:53:54] Tap a card… (Ctrl+C to stop)
+[2026-08-06 19:54:00] UID: 13108F9E
+[2026-08-06 19:54:01] UID: 13108F9E
+[2026-08-06 19:54:37] UID: 13108F9E
+[2026-08-06 19:54:40] UID: 9579D385
