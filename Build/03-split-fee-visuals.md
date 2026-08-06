@@ -28,8 +28,8 @@ After a **Charge Bill** tap, animate `$250` visibly splitting into `$200 → Res
 
 | Phase | Why |
 |-------|-----|
-| **[Phase 1 — Ledger](./phase-01-ledger.md)** | `payBill` / `spend` return breakdown + fee numbers |
-| **[Phase 2 — Dashboard](./phase-02-dashboard.md)** | `handleTap`, `Terminal`, `AccountCard`, simulate demo working |
+| **[Phase 1 — Ledger](./01-ledger-core.md)** | `payBill` / `spend` return breakdown + fee numbers |
+| **[Phase 2 — Dashboard](./02-dashboard-simulate.md)** | `handleTap`, `Terminal`, `AccountCard`, simulate demo working |
 
 **Can start in parallel:** scaffold empty components during Phase 2; wire and test only after the simulate demo checkpoint passes.
 

@@ -12,13 +12,13 @@ Stage-by-stage build plans for the Loop tap-payment demo. Each phase is a self-c
 |-------|-------|------|----------|--------|
 | 0 | Project setup | [00-setup.md](./00-setup.md) | Yes | Everything |
 | — | Shared contracts | [contracts.md](./contracts.md) | Yes | Parallel work after Phase 1 |
-| 1 | Ledger core | [phase-01-ledger.md](./phase-01-ledger.md) | Yes | Phases 2–4 |
-| 2 | Dashboard + simulate taps | [phase-02-dashboard.md](./phase-02-dashboard.md) | Yes | Phase 3, 7 |
-| 3 | Split animation + fee line | [phase-03-visuals.md](./phase-03-visuals.md) | Yes | — |
-| 4 | Solana devnet tx | [phase-04-solana.md](./phase-04-solana.md) | Yes | — |
-| 7 | Polish + rehearsal | [phase-07-polish.md](./phase-07-polish.md) | Yes | Submit |
-| 5 | Tap bridge (WebSocket) | [phase-05-bridge.md](./phase-05-bridge.md) | **Optional** | Phase 6 |
-| 6 | Physical reader | [phase-06-hardware.md](./phase-06-hardware.md) | **Optional** | — |
+| 1 | Ledger core | [01-ledger-core.md](./01-ledger-core.md) | Yes | Phases 2–4 |
+| 2 | Dashboard + simulate taps | [02-dashboard-simulate.md](./02-dashboard-simulate.md) | Yes | Phase 3, 7 |
+| 3 | Split animation + fee line | [03-split-fee-visuals.md](./03-split-fee-visuals.md) | Yes | — |
+| 4 | Solana devnet tx | [04-solana-devnet.md](./04-solana-devnet.md) | Yes | — |
+| 7 | Polish + rehearsal | [07-polish-rehearsal.md](./07-polish-rehearsal.md) | Yes | Submit |
+| 5 | Tap bridge (WebSocket) | [05-tap-bridge.md](./05-tap-bridge.md) | **Optional** | Phase 6 |
+| 6 | Physical reader | [06-physical-reader.md](./06-physical-reader.md) | **Optional** | — |
 
 ---
 

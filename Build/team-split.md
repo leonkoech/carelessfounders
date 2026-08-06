@@ -72,7 +72,7 @@ Hardware: skip unless both agree after a clean simulate-only run-through.
 
 ### Person A — Integrator
 
-1. Complete [phase-01-ledger.md](./phase-01-ledger.md) per contracts
+1. Complete [01-ledger-core.md](./01-ledger-core.md) per contracts
 2. Implement `handleTap(uid)` and terminal mode routing
 3. Wire ledger via `/api/*` routes or direct imports
 4. Merge all component PRs into `app/page.tsx`

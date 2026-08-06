@@ -126,4 +126,4 @@ Paste printed values into `.env.local`. Phase 4 agent will create the script; fo
 
 ## Next phase
 
-→ [phase-01-ledger.md](./phase-01-ledger.md) — implement [`contracts.md`](./contracts.md) ledger signatures
+→ [01-ledger-core.md](./01-ledger-core.md) — implement [`contracts.md`](./contracts.md) ledger signatures
