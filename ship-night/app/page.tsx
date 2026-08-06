@@ -2,7 +2,9 @@
 
 import { useCallback, useRef, useState } from "react";
 import AccountCard from "@/components/AccountCard";
+import FeeLine from "@/components/FeeLine";
 import SimulateBar from "@/components/SimulateBar";
+import SplitAnimation from "@/components/SplitAnimation";
 import Terminal, { type TerminalMode } from "@/components/Terminal";
 // Prototype: swap to `@/lib/accounts` + `@/lib/ledger` when Phase 1 merges
 import {
@@ -18,6 +20,18 @@ import {
 } from "@/lib/prototype";
 import { simulateTap } from "@/lib/tapSource";
 
+type SplitPayload = {
+  total: number;
+  merchantAmount: number;
+  tipAmount: number;
+};
+
+type FeePayload = {
+  ourFee: number;
+  squareFee: number;
+  amount: number;
+};
+
 export default function Home() {
   const [accounts, setAccounts] = useState<Account[]>(() => getState());
   const [previousBalances, setPreviousBalances] = useState<
@@ -30,6 +44,8 @@ export default function Home() {
   const [waiting, setWaiting] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [highlightIds, setHighlightIds] = useState<string[]>([]);
+  const [splitPayload, setSplitPayload] = useState<SplitPayload | null>(null);
+  const [feePayload, setFeePayload] = useState<FeePayload | null>(null);
 
   const accountsRef = useRef(accounts);
   accountsRef.current = accounts;
@@ -58,6 +74,7 @@ export default function Home() {
       }
 
       setMessage(null);
+      setSplitPayload(null);
 
       try {
         if (mode === "charge") {
@@ -65,25 +82,46 @@ export default function Home() {
             setMessage("Charge Bill: tap the Customer card.");
             return;
           }
-          payBill("customer", "restaurant", total, tip, "maria");
+
+          const result = payBill(
+            "customer",
+            "restaurant",
+            total,
+            tip,
+            "maria",
+          );
           refreshAccounts();
           flashAccounts(["customer", "restaurant", "maria"]);
+          setFeePayload(null);
+          setSplitPayload({
+            total,
+            merchantAmount: result.merchantCredited,
+            tipAmount: result.tipCredited,
+          });
         } else if (mode === "spend") {
           if (accountId !== "maria") {
             setMessage("Spend: tap Maria's card.");
             return;
           }
-          spend("maria", "tacostand", amount);
+
+          const result = spend("maria", "tacostand", amount);
           refreshAccounts();
           flashAccounts(["maria", "tacostand"]);
+          setFeePayload({
+            ourFee: result.ourFee,
+            squareFee: result.squareFee,
+            amount: result.amount,
+          });
         } else {
           if (accountId !== "maria") {
             setMessage("Cash Out: tap Maria's card.");
             return;
           }
+
           cashOut("maria");
           refreshAccounts();
           flashAccounts(["maria", "agent"]);
+          setFeePayload(null);
         }
 
         setWaiting(false);
@@ -97,6 +135,8 @@ export default function Home() {
     [amount, flashAccounts, mode, refreshAccounts, tip, total],
   );
 
+  const clearSplit = useCallback(() => setSplitPayload(null), []);
+
   const onSimulateTap = useCallback(
     (uid: string) => simulateTap(uid, handleTap),
     [handleTap],
@@ -107,7 +147,7 @@ export default function Home() {
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
         <header className="space-y-2">
           <div className="inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200">
-            Prototype · mock ledger (Phase 2)
+            Prototype · Phases 2–3
           </div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
             Loop · Ship Night
@@ -116,7 +156,8 @@ export default function Home() {
             Tap-to-pay demo dashboard
           </h1>
           <p className="max-w-2xl text-zinc-400">
-            Simulate card taps to move money — no hardware, no Phase 1 dependency.
+            Simulate card taps — tip split animation and fee comparison on
+            screen.
           </p>
         </header>
 
@@ -137,6 +178,7 @@ export default function Home() {
             onModeChange={(nextMode) => {
               setMode(nextMode);
               setMessage(null);
+              setFeePayload(null);
               setWaiting(true);
             }}
             total={total}
@@ -157,15 +199,34 @@ export default function Home() {
             waiting={waiting}
           />
 
-          {message && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100">
-              {message}
-            </div>
-          )}
+          <div className="space-y-4">
+            {feePayload && (
+              <FeeLine
+                ourFee={feePayload.ourFee}
+                squareFee={feePayload.squareFee}
+                amount={feePayload.amount}
+              />
+            )}
+
+            {message && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100">
+                {message}
+              </div>
+            )}
+          </div>
         </section>
 
         <SimulateBar accounts={accounts} onSimulateTap={onSimulateTap} />
       </main>
+
+      {splitPayload && (
+        <SplitAnimation
+          total={splitPayload.total}
+          merchantAmount={splitPayload.merchantAmount}
+          tipAmount={splitPayload.tipAmount}
+          onComplete={clearSplit}
+        />
+      )}
     </div>
   );
 }
