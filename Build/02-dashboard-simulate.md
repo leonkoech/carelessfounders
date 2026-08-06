@@ -230,6 +230,6 @@ Solana Explorer link and fee kill-shot come in Phases 3–4. **You are safe to s
 
 ## Next phases
 
-→ [Phase 3 — Split animation + fee line](./phase-03-visuals.md) (visual payoffs)  
-→ [Phase 4 — Solana devnet tx](./phase-04-solana.md) (Explorer link)  
-→ Optional: [Phase 5 — Tap bridge](./phase-05-bridge.md) (real hardware path)
+→ [Phase 3 — Split animation + fee line](./03-split-fee-visuals.md) (visual payoffs)  
+→ [Phase 4 — Solana devnet tx](./04-solana-devnet.md) (Explorer link)  
+→ Optional: [Phase 5 — Tap bridge](./05-tap-bridge.md) (real hardware path)

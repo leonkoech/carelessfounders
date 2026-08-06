@@ -31,7 +31,7 @@ Expose `settle(amount)` that performs a **real devnet SPL token transfer** (trea
 | Phase | Why |
 |-------|-----|
 | **[Phase 0 — Setup](./00-setup.md)** | `@solana/web3.js`, `@solana/spl-token`, `tsx` |
-| **[Phase 1 — Ledger](./phase-01-ledger.md)** | **Only hard dependency** — ledger demo works without Solana |
+| **[Phase 1 — Ledger](./01-ledger-core.md)** | **Only hard dependency** — ledger demo works without Solana |
 
 **Parallelizes after Phase 1:** Person C can build `scripts/solana-setup.ts`, `lib/solana.ts`, `/api/settle`, and `SolanaPanel.tsx` while Person A/B finish Phase 2. Merge panel into dashboard when ready.
 
