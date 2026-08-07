@@ -1,6 +1,6 @@
 "use client";
 
-export type TerminalMode = "charge" | "spend" | "cashout";
+import type { TerminalMode } from "@/lib/accounts";
 
 type TerminalProps = {
   mode: TerminalMode;

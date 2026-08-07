@@ -6,6 +6,10 @@ export type Account = {
   uid?: string;
 };
 
+// Ambient/shared, not per-tap-event: a tap only ever carries {uid, source} — the
+// terminal's currently-armed mode lives in Firestore so hardware doesn't need to know it.
+export type TerminalMode = "charge" | "spend" | "cashout";
+
 export const SEED_ACCOUNTS: Account[] = [
   {
     id: "customer",

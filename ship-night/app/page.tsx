@@ -1,60 +1,66 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AccountCard from "@/components/AccountCard";
 import FeeLine from "@/components/FeeLine";
 import SimulateBar from "@/components/SimulateBar";
 import { SolanaPanel } from "@/components/SolanaPanel";
 import SplitAnimation from "@/components/SplitAnimation";
-import Terminal, { type TerminalMode } from "@/components/Terminal";
+import Terminal from "@/components/Terminal";
+import { DEMO_BILL_TOTAL, DEMO_SPEND, DEMO_TIP, type Account, type TerminalMode } from "@/lib/accounts";
 import {
-  DEMO_BILL_TOTAL,
-  DEMO_SPEND,
-  DEMO_TIP,
-  UID_MAP,
-  type Account,
-} from "@/lib/accounts";
-import { cashOut, getState, payBill, reset, spend } from "@/lib/ledger";
+  setTerminalState,
+  subscribeAccounts,
+  subscribeTerminal,
+  type TerminalState,
+} from "@/lib/firestoreLedger";
 import { simulateTap } from "@/lib/tapSource";
 
-type SplitPayload = {
-  total: number;
-  merchantAmount: number;
-  tipAmount: number;
+type SplitPayload = { total: number; merchantAmount: number; tipAmount: number };
+type FeePayload = { ourFee: number; squareFee: number; amount: number };
+
+const DEFAULT_TERMINAL: TerminalState = {
+  mode: "charge",
+  total: DEMO_BILL_TOTAL,
+  tip: DEMO_TIP,
+  amount: DEMO_SPEND,
 };
 
-type FeePayload = {
-  ourFee: number;
-  squareFee: number;
-  amount: number;
-};
+function reasonToMessage(reason: string | undefined, mode: TerminalMode): string {
+  if (reason === "unknown_uid") return "Unknown card — tap a registered demo card.";
+  if (reason === "wrong_card") {
+    if (mode === "charge") return "Charge Bill: tap the Customer card.";
+    if (mode === "spend") return "Spend: tap Maria's card.";
+    return "Cash Out: tap Maria's card.";
+  }
+  return reason ?? "Transaction failed.";
+}
 
 export default function Home() {
-  const [accounts, setAccounts] = useState<Account[]>(() => getState());
-  const [previousBalances, setPreviousBalances] = useState<
-    Record<string, number>
-  >({});
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [previousBalances, setPreviousBalances] = useState<Record<string, number>>({});
   const [highlightIds, setHighlightIds] = useState<string[]>([]);
-  const [mode, setMode] = useState<TerminalMode>("charge");
-  const [total, setTotal] = useState(DEMO_BILL_TOTAL);
-  const [tip, setTip] = useState(DEMO_TIP);
-  const [amount, setAmount] = useState(DEMO_SPEND);
+  const [terminal, setTerminal] = useState<TerminalState>(DEFAULT_TERMINAL);
   const [waiting, setWaiting] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [splitPayload, setSplitPayload] = useState<SplitPayload | null>(null);
   const [feePayload, setFeePayload] = useState<FeePayload | null>(null);
 
-  const accountsRef = useRef(accounts);
-  accountsRef.current = accounts;
+  const accountsRef = useRef<Account[]>(accounts);
 
-  const refreshAccounts = useCallback(() => {
-    const prior = Object.fromEntries(
-      accountsRef.current.map((a) => [a.id, a.balance])
-    );
-    const next = getState();
-    setPreviousBalances(prior);
-    setAccounts(next);
-    accountsRef.current = next;
+  useEffect(() => {
+    const unsubAccounts = subscribeAccounts((next) => {
+      const prior = Object.fromEntries(accountsRef.current.map((a) => [a.id, a.balance]));
+      setPreviousBalances(prior);
+      setAccounts(next);
+      accountsRef.current = next;
+    });
+    const unsubTerminal = subscribeTerminal((state) => setTerminal(state));
+
+    return () => {
+      unsubAccounts();
+      unsubTerminal();
+    };
   }, []);
 
   const flashAccounts = useCallback((ids: string[]) => {
@@ -63,65 +69,46 @@ export default function Home() {
   }, []);
 
   const handleTap = useCallback(
-    (uid: string) => {
-      const accountId = UID_MAP[uid];
-      if (!accountId) {
-        setMessage("Unknown card — tap a registered demo card.");
-        return;
-      }
-
+    async (uid: string) => {
       setMessage(null);
       setSplitPayload(null);
 
-      try {
-        if (mode === "charge") {
-          if (accountId !== "customer") {
-            setMessage("Charge Bill: tap the Customer card.");
-            return;
-          }
+      const res = await fetch("/api/tap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, source: "sim" }),
+      });
+      const data = await res.json();
 
-          const result = payBill("customer", "restaurant", total, tip, "maria");
-          refreshAccounts();
-          flashAccounts(["customer", "restaurant", "maria"]);
-          setFeePayload(null);
-          setSplitPayload({
-            total,
-            merchantAmount: result.merchantCredited,
-            tipAmount: result.tipCredited,
-          });
-        } else if (mode === "spend") {
-          if (accountId !== "maria") {
-            setMessage("Spend: tap Maria's card.");
-            return;
-          }
-
-          const result = spend("maria", "tacostand", amount);
-          refreshAccounts();
-          flashAccounts(["maria", "tacostand"]);
-          setFeePayload({
-            ourFee: result.ourFee,
-            squareFee: result.squareFee,
-            amount: result.amount,
-          });
-        } else {
-          if (accountId !== "maria") {
-            setMessage("Cash Out: tap Maria's card.");
-            return;
-          }
-
-          cashOut("maria");
-          refreshAccounts();
-          flashAccounts(["maria", "agent"]);
-          setFeePayload(null);
-        }
-
-        setWaiting(false);
-        window.setTimeout(() => setWaiting(true), 400);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Transaction failed.");
+      if (!data.ok) {
+        setMessage(reasonToMessage(data.reason, data.mode ?? terminal.mode));
+        return;
       }
+
+      if (data.mode === "charge") {
+        flashAccounts(["customer", "restaurant", "maria"]);
+        setFeePayload(null);
+        setSplitPayload({
+          total: data.result.breakdown.food + data.result.breakdown.tip,
+          merchantAmount: data.result.breakdown.food,
+          tipAmount: data.result.breakdown.tip,
+        });
+      } else if (data.mode === "spend") {
+        flashAccounts(["maria", "tacostand"]);
+        setFeePayload({
+          ourFee: data.result.ourFee,
+          squareFee: data.result.squareFee,
+          amount: data.result.amount,
+        });
+      } else {
+        flashAccounts(["maria", "agent"]);
+        setFeePayload(null);
+      }
+
+      setWaiting(false);
+      window.setTimeout(() => setWaiting(true), 400);
     },
-    [amount, flashAccounts, mode, refreshAccounts, tip, total]
+    [terminal.mode, flashAccounts]
   );
 
   const clearSplit = useCallback(() => setSplitPayload(null), []);
@@ -131,13 +118,15 @@ export default function Home() {
     [handleTap]
   );
 
-  function handleReset() {
-    reset();
-    const next = getState();
-    setAccounts(next);
-    accountsRef.current = next;
-    setPreviousBalances({});
-    setHighlightIds([]);
+  function updateTerminal(patch: Partial<TerminalState>) {
+    const next = { ...terminal, ...patch };
+    setTerminal(next);
+    setWaiting(true);
+    void setTerminalState(next);
+  }
+
+  async function handleReset() {
+    await fetch("/api/reset", { method: "POST" });
     setMessage(null);
     setSplitPayload(null);
     setFeePayload(null);
@@ -179,28 +168,18 @@ export default function Home() {
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <Terminal
-            mode={mode}
+            mode={terminal.mode}
             onModeChange={(nextMode) => {
-              setMode(nextMode);
               setMessage(null);
               setFeePayload(null);
-              setWaiting(true);
+              updateTerminal({ mode: nextMode });
             }}
-            total={total}
-            tip={tip}
-            amount={amount}
-            onTotalChange={(value) => {
-              setTotal(value);
-              setWaiting(true);
-            }}
-            onTipChange={(value) => {
-              setTip(value);
-              setWaiting(true);
-            }}
-            onAmountChange={(value) => {
-              setAmount(value);
-              setWaiting(true);
-            }}
+            total={terminal.total}
+            tip={terminal.tip}
+            amount={terminal.amount}
+            onTotalChange={(value) => updateTerminal({ total: value })}
+            onTipChange={(value) => updateTerminal({ tip: value })}
+            onAmountChange={(value) => updateTerminal({ amount: value })}
             waiting={waiting}
           />
 
