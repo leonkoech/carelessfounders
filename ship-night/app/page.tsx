@@ -6,18 +6,14 @@ import FeeLine from "@/components/FeeLine";
 import SimulateBar from "@/components/SimulateBar";
 import SplitAnimation from "@/components/SplitAnimation";
 import Terminal, { type TerminalMode } from "@/components/Terminal";
-// Prototype: swap to `@/lib/accounts` + `@/lib/ledger` when Phase 1 merges
 import {
   DEMO_BILL_TOTAL,
   DEMO_SPEND,
   DEMO_TIP,
   UID_MAP,
-  cashOut,
-  getState,
-  payBill,
-  spend,
   type Account,
-} from "@/lib/prototype";
+} from "@/lib/accounts";
+import { cashOut, getState, payBill, spend } from "@/lib/ledger";
 import { connectTapBridge, simulateTap } from "@/lib/tapSource";
 
 type SplitPayload = {
@@ -152,9 +148,6 @@ export default function Home() {
     <div className="min-h-full bg-zinc-950 text-white">
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
         <header className="space-y-2">
-          <div className="inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200">
-            Prototype · Phases 2–3
-          </div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
             Loop · Ship Night
           </p>
@@ -162,8 +155,8 @@ export default function Home() {
             Tap-to-pay demo dashboard
           </h1>
           <p className="max-w-2xl text-zinc-400">
-            Simulate card taps — tip split animation and fee comparison on
-            screen.
+            Simulate card taps through the Phase 1 ledger — tip split animation
+            and fee comparison on screen.
           </p>
         </header>
 
