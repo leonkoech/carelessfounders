@@ -47,8 +47,12 @@ export const SEED_ACCOUNTS: Account[] = [
 ];
 
 export const UID_MAP: Record<string, string> = {
+  // Simulate buttons (always present)
   CUSTOMER_CARD: "customer",
   MARIA_CARD: "maria",
+  // Physical PN532 USB cards (from firmware/taps.log)
+  "13108F9E": "customer",
+  "9579D385": "maria",
 };
 
 export const OUR_FEE = 0.01;

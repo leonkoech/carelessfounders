@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AccountCard from "@/components/AccountCard";
 import FeeLine from "@/components/FeeLine";
 import SimulateBar from "@/components/SimulateBar";
@@ -18,7 +18,7 @@ import {
   spend,
   type Account,
 } from "@/lib/prototype";
-import { simulateTap } from "@/lib/tapSource";
+import { connectTapBridge, simulateTap } from "@/lib/tapSource";
 
 type SplitPayload = {
   total: number;
@@ -141,6 +141,12 @@ export default function Home() {
     (uid: string) => simulateTap(uid, handleTap),
     [handleTap],
   );
+
+  // Physical reader / curl → bridge WS → same handleTap as SimulateBar
+  useEffect(() => {
+    const bridge = connectTapBridge(handleTap);
+    return () => bridge.close();
+  }, [handleTap]);
 
   return (
     <div className="min-h-full bg-zinc-950 text-white">
