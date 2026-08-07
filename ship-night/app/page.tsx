@@ -7,7 +7,7 @@ import LandingNav from "@/components/landing/LandingNav";
 
 export default function Home() {
   return (
-    <div className="min-h-full bg-zinc-950 text-white">
+    <div className="min-h-full flex-1 bg-[#fffaf5] text-[#121111]">
       <LandingNav />
       <Hero />
       <HowItWorks />

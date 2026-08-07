@@ -1,0 +1,3 @@
+cd ship-night
+npm install
+npm run dev

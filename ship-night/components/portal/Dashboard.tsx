@@ -5,56 +5,69 @@ import AccountCard from "@/components/AccountCard";
 import FeeLine from "@/components/FeeLine";
 import PortalHeader from "@/components/portal/PortalHeader";
 import SimulateBar from "@/components/SimulateBar";
+import { SolanaPanel } from "@/components/SolanaPanel";
 import SplitAnimation from "@/components/SplitAnimation";
-import Terminal, { type TerminalMode } from "@/components/Terminal";
+import Terminal from "@/components/Terminal";
 import {
   DEMO_BILL_TOTAL,
   DEMO_SPEND,
   DEMO_TIP,
-  UID_MAP,
   type Account,
+  type TerminalMode,
 } from "@/lib/accounts";
-import { cashOut, getState, payBill, spend } from "@/lib/ledger";
+import {
+  setTerminalState,
+  subscribeAccounts,
+  subscribeTerminal,
+  type TerminalState,
+} from "@/lib/firestoreLedger";
 import { connectTapBridge, simulateTap } from "@/lib/tapSource";
 
-type SplitPayload = {
-  total: number;
-  merchantAmount: number;
-  tipAmount: number;
+type SplitPayload = { total: number; merchantAmount: number; tipAmount: number };
+type FeePayload = { ourFee: number; squareFee: number; amount: number };
+
+const DEFAULT_TERMINAL: TerminalState = {
+  mode: "charge",
+  total: DEMO_BILL_TOTAL,
+  tip: DEMO_TIP,
+  amount: DEMO_SPEND,
 };
 
-type FeePayload = {
-  ourFee: number;
-  squareFee: number;
-  amount: number;
-};
+function reasonToMessage(reason: string | undefined, mode: TerminalMode): string {
+  if (reason === "unknown_uid") return "Unknown card — tap a registered demo card.";
+  if (reason === "wrong_card") {
+    if (mode === "charge") return "Charge Bill: tap the Customer card.";
+    if (mode === "spend") return "Spend: tap Maria's card.";
+    return "Cash Out: tap Maria's card.";
+  }
+  return reason ?? "Transaction failed.";
+}
 
 export default function Dashboard() {
-  const [accounts, setAccounts] = useState<Account[]>(() => getState());
-  const [previousBalances, setPreviousBalances] = useState<
-    Record<string, number>
-  >({});
-  const [mode, setMode] = useState<TerminalMode>("charge");
-  const [total, setTotal] = useState(DEMO_BILL_TOTAL);
-  const [tip, setTip] = useState(DEMO_TIP);
-  const [amount, setAmount] = useState(DEMO_SPEND);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [previousBalances, setPreviousBalances] = useState<Record<string, number>>({});
+  const [highlightIds, setHighlightIds] = useState<string[]>([]);
+  const [terminal, setTerminal] = useState<TerminalState>(DEFAULT_TERMINAL);
   const [waiting, setWaiting] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
-  const [highlightIds, setHighlightIds] = useState<string[]>([]);
   const [splitPayload, setSplitPayload] = useState<SplitPayload | null>(null);
   const [feePayload, setFeePayload] = useState<FeePayload | null>(null);
 
-  const accountsRef = useRef(accounts);
-  accountsRef.current = accounts;
+  const accountsRef = useRef<Account[]>(accounts);
 
-  const refreshAccounts = useCallback(() => {
-    const prior = Object.fromEntries(
-      accountsRef.current.map((a) => [a.id, a.balance]),
-    );
-    const next = getState();
-    setPreviousBalances(prior);
-    setAccounts(next);
-    accountsRef.current = next;
+  useEffect(() => {
+    const unsubAccounts = subscribeAccounts((next) => {
+      const prior = Object.fromEntries(accountsRef.current.map((a) => [a.id, a.balance]));
+      setPreviousBalances(prior);
+      setAccounts(next);
+      accountsRef.current = next;
+    });
+    const unsubTerminal = subscribeTerminal((state) => setTerminal(state));
+
+    return () => {
+      unsubAccounts();
+      unsubTerminal();
+    };
   }, []);
 
   const flashAccounts = useCallback((ids: string[]) => {
@@ -63,82 +76,71 @@ export default function Dashboard() {
   }, []);
 
   const handleTap = useCallback(
-    (uid: string) => {
-      const accountId = UID_MAP[uid];
-      if (!accountId) {
-        setMessage("Unknown card — tap a registered demo card.");
-        return;
-      }
-
+    async (uid: string) => {
       setMessage(null);
       setSplitPayload(null);
 
-      try {
-        if (mode === "charge") {
-          if (accountId !== "customer") {
-            setMessage("Charge Bill: tap the Customer card.");
-            return;
-          }
+      const res = await fetch("/api/tap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, source: "sim" }),
+      });
+      const data = await res.json();
 
-          const result = payBill(
-            "customer",
-            "restaurant",
-            total,
-            tip,
-            "maria",
-          );
-          refreshAccounts();
-          flashAccounts(["customer", "restaurant", "maria"]);
-          setFeePayload(null);
-          setSplitPayload({
-            total,
-            merchantAmount: result.merchantCredited,
-            tipAmount: result.tipCredited,
-          });
-        } else if (mode === "spend") {
-          if (accountId !== "maria") {
-            setMessage("Spend: tap Maria's card.");
-            return;
-          }
-
-          const result = spend("maria", "tacostand", amount);
-          refreshAccounts();
-          flashAccounts(["maria", "tacostand"]);
-          setFeePayload({
-            ourFee: result.ourFee,
-            squareFee: result.squareFee,
-            amount: result.amount,
-          });
-        } else {
-          if (accountId !== "maria") {
-            setMessage("Cash Out: tap Maria's card.");
-            return;
-          }
-
-          cashOut("maria");
-          refreshAccounts();
-          flashAccounts(["maria", "agent"]);
-          setFeePayload(null);
-        }
-
-        setWaiting(false);
-        window.setTimeout(() => setWaiting(true), 400);
-      } catch (error) {
-        setMessage(
-          error instanceof Error ? error.message : "Transaction failed.",
-        );
+      if (!data.ok) {
+        setMessage(reasonToMessage(data.reason, data.mode ?? terminal.mode));
+        return;
       }
+
+      if (data.mode === "charge") {
+        flashAccounts(["customer", "restaurant", "maria"]);
+        setFeePayload(null);
+        setSplitPayload({
+          total: data.result.breakdown.food + data.result.breakdown.tip,
+          merchantAmount: data.result.breakdown.food,
+          tipAmount: data.result.breakdown.tip,
+        });
+      } else if (data.mode === "spend") {
+        flashAccounts(["maria", "tacostand"]);
+        setFeePayload({
+          ourFee: data.result.ourFee,
+          squareFee: data.result.squareFee,
+          amount: data.result.amount,
+        });
+      } else {
+        flashAccounts(["maria", "agent"]);
+        setFeePayload(null);
+      }
+
+      setWaiting(false);
+      window.setTimeout(() => setWaiting(true), 400);
     },
-    [amount, flashAccounts, mode, refreshAccounts, tip, total],
+    [terminal.mode, flashAccounts]
   );
 
   const clearSplit = useCallback(() => setSplitPayload(null), []);
 
   const onSimulateTap = useCallback(
     (uid: string) => simulateTap(uid, handleTap),
-    [handleTap],
+    [handleTap]
   );
 
+  function updateTerminal(patch: Partial<TerminalState>) {
+    const next = { ...terminal, ...patch };
+    setTerminal(next);
+    setWaiting(true);
+    void setTerminalState(next);
+  }
+
+  async function handleReset() {
+    await fetch("/api/reset", { method: "POST" });
+    setMessage(null);
+    setSplitPayload(null);
+    setFeePayload(null);
+    setWaiting(true);
+  }
+
+  // Physical reader / curl → bridge WS → same handleTap as SimulateBar
   useEffect(() => {
     const bridge = connectTapBridge(handleTap);
     return () => bridge.close();
@@ -148,17 +150,23 @@ export default function Dashboard() {
     <div className="min-h-full flex-1 bg-zinc-950 text-white">
       <PortalHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-        <header className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
-            Loop · Portal
-          </p>
-          <h1 className="text-3xl font-bold sm:text-4xl">
-            Tap-to-pay demo dashboard
-          </h1>
-          <p className="max-w-2xl text-zinc-400">
-            Simulate card taps — tip split animation and fee comparison on
-            screen.
-          </p>
+        <header className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
+              Loop · Portal
+            </p>
+            <h1 className="text-3xl font-bold sm:text-4xl">Tap-to-pay demo dashboard</h1>
+            <p className="max-w-2xl text-zinc-400">
+              Simulate card taps to move money — dollars enter once and circulate at ~$0.01 a hop.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+          >
+            Reset
+          </button>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -174,28 +182,18 @@ export default function Dashboard() {
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <Terminal
-            mode={mode}
+            mode={terminal.mode}
             onModeChange={(nextMode) => {
-              setMode(nextMode);
               setMessage(null);
               setFeePayload(null);
-              setWaiting(true);
+              updateTerminal({ mode: nextMode });
             }}
-            total={total}
-            tip={tip}
-            amount={amount}
-            onTotalChange={(value) => {
-              setTotal(value);
-              setWaiting(true);
-            }}
-            onTipChange={(value) => {
-              setTip(value);
-              setWaiting(true);
-            }}
-            onAmountChange={(value) => {
-              setAmount(value);
-              setWaiting(true);
-            }}
+            total={terminal.total}
+            tip={terminal.tip}
+            amount={terminal.amount}
+            onTotalChange={(value) => updateTerminal({ total: value })}
+            onTipChange={(value) => updateTerminal({ tip: value })}
+            onAmountChange={(value) => updateTerminal({ amount: value })}
             waiting={waiting}
           />
 
@@ -217,6 +215,8 @@ export default function Dashboard() {
         </section>
 
         <SimulateBar accounts={accounts} onSimulateTap={onSimulateTap} />
+
+        <SolanaPanel />
       </main>
 
       {splitPayload && (

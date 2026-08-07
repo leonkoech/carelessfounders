@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Loop — Instant stablecoin rails",
   description:
-    "Near-zero-fee stablecoin payments for tipped workers. Tap a card, money moves in seconds, settled on Solana.",
+    "Instant, near-zero-fee stablecoin rails for the cash economy. Tap a card, money moves in seconds, settled on Solana.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
