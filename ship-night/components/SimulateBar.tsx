@@ -1,6 +1,6 @@
 "use client";
 
-import type { Account } from "@/lib/prototype/accounts";
+import type { Account } from "@/lib/accounts";
 
 type SimulateBarProps = {
   accounts: Account[];
