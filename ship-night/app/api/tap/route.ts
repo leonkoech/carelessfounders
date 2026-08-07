@@ -18,17 +18,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, reason: "unknown_uid", accounts: getState() });
   }
 
+  // Each mode has one expected card (contracts.md's resolution table). The tapped
+  // uid identifies who tapped; it must match that role, not stand in as whoever it is.
+  const EXPECTED_ACCOUNT: Record<TerminalMode, string> = {
+    charge: "customer",
+    spend: "maria",
+    cashout: "maria",
+  };
+  if (accountId !== EXPECTED_ACCOUNT[mode]) {
+    return NextResponse.json({ ok: false, reason: "wrong_card", accounts: getState() });
+  }
+
   try {
     let result: unknown;
     switch (mode) {
       case "charge":
-        result = payBill(accountId, "restaurant", total ?? DEMO_BILL_TOTAL, tip ?? DEMO_TIP, "maria");
+        result = payBill("customer", "restaurant", total ?? DEMO_BILL_TOTAL, tip ?? DEMO_TIP, "maria");
         break;
       case "spend":
-        result = spend(accountId, "tacostand", amount ?? DEMO_SPEND);
+        result = spend("maria", "tacostand", amount ?? DEMO_SPEND);
         break;
       case "cashout":
-        result = cashOut(accountId);
+        result = cashOut("maria");
         break;
       default:
         return NextResponse.json(

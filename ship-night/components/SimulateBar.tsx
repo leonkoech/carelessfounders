@@ -2,26 +2,31 @@
 
 import type { Account } from "@/lib/accounts";
 
-export function SimulateBar({
-  accounts,
-  onTap,
-}: {
+type SimulateBarProps = {
   accounts: Account[];
-  onTap: (uid: string) => void;
-}) {
-  const tappable = accounts.filter((a) => a.uid);
+  onSimulateTap: (uid: string) => void;
+};
+
+export default function SimulateBar({
+  accounts,
+  onSimulateTap,
+}: SimulateBarProps) {
+  const tappable = accounts.filter((account) => account.uid);
 
   return (
-    <div className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
-      <div className="text-sm uppercase tracking-wide text-zinc-500">Simulate tap</div>
-      <div className="mt-3 flex flex-wrap gap-3">
-        {tappable.map((a) => (
+    <div className="rounded-2xl border border-dashed border-zinc-600 bg-zinc-950/60 p-5">
+      <p className="mb-4 text-sm font-medium uppercase tracking-wide text-zinc-500">
+        Simulate tap (no hardware needed)
+      </p>
+      <div className="flex flex-wrap gap-3">
+        {tappable.map((account) => (
           <button
-            key={a.id}
-            onClick={() => onTap(a.uid!)}
-            className="rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            key={account.id}
+            type="button"
+            onClick={() => onSimulateTap(account.uid!)}
+            className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 active:scale-[0.98]"
           >
-            Tap {a.name}
+            Simulate: {account.name} taps
           </button>
         ))}
       </div>

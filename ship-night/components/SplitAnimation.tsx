@@ -1,24 +1,93 @@
-export function SplitAnimation({
-  total,
-  food,
-  tip,
-}: {
+"use client";
+
+import { useEffect, useState } from "react";
+
+type SplitAnimationProps = {
   total: number;
-  food: number;
-  tip: number;
-}) {
+  merchantAmount: number;
+  tipAmount: number;
+  merchantLabel?: string;
+  tipLabel?: string;
+  onComplete?: () => void;
+};
+
+function formatMoney(value: number): string {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+export default function SplitAnimation({
+  total,
+  merchantAmount,
+  tipAmount,
+  merchantLabel = "Restaurant",
+  tipLabel = "Maria",
+  onComplete,
+}: SplitAnimationProps) {
+  const [phase, setPhase] = useState<"enter" | "split" | "exit">("enter");
+
+  useEffect(() => {
+    const splitTimer = window.setTimeout(() => setPhase("split"), 120);
+    const exitTimer = window.setTimeout(() => setPhase("exit"), 900);
+    const completeTimer = window.setTimeout(() => onComplete?.(), 1000);
+
+    return () => {
+      window.clearTimeout(splitTimer);
+      window.clearTimeout(exitTimer);
+      window.clearTimeout(completeTimer);
+    };
+  }, [total, merchantAmount, tipAmount, onComplete]);
+
+  if (phase === "exit") {
+    return null;
+  }
+
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
-      <div className="text-3xl font-bold tabular-nums">${total.toFixed(2)}</div>
-      <div className="text-2xl text-zinc-400">→</div>
-      <div className="flex flex-col gap-1">
-        <span className="text-lg font-semibold tabular-nums">
-          ${food.toFixed(2)} <span className="text-sm font-normal text-zinc-500">restaurant</span>
-        </span>
-        <span className="text-lg font-semibold tabular-nums text-emerald-600">
-          ${tip.toFixed(2)}{" "}
-          <span className="text-sm font-normal text-zinc-500">to Maria, instantly</span>
-        </span>
+    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="relative flex min-h-[220px] w-full max-w-3xl items-center justify-center px-6">
+        <div
+          className={`absolute text-6xl font-black text-white transition-all duration-500 sm:text-7xl ${
+            phase === "split"
+              ? "scale-75 opacity-0"
+              : "scale-100 opacity-100"
+          }`}
+        >
+          {formatMoney(total)}
+        </div>
+
+        <div
+          className={`absolute flex flex-col items-center transition-all duration-500 ${
+            phase === "split"
+              ? "-translate-x-40 opacity-100"
+              : "translate-x-0 opacity-0"
+          }`}
+        >
+          <span className="text-5xl font-black text-sky-300 sm:text-6xl">
+            {formatMoney(merchantAmount)}
+          </span>
+          <span className="mt-2 text-xl font-semibold text-sky-100">
+            → {merchantLabel}
+          </span>
+        </div>
+
+        <div
+          className={`absolute flex flex-col items-center transition-all duration-500 ${
+            phase === "split"
+              ? "translate-x-40 opacity-100"
+              : "translate-x-0 opacity-0"
+          }`}
+        >
+          <span className="text-5xl font-black text-emerald-300 sm:text-6xl">
+            {formatMoney(tipAmount)}
+          </span>
+          <span className="mt-2 text-xl font-semibold text-emerald-100">
+            → {tipLabel}
+          </span>
+        </div>
       </div>
     </div>
   );
