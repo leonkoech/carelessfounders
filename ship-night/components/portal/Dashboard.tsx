@@ -33,6 +33,13 @@ const DEFAULT_TERMINAL: TerminalState = {
   amount: DEMO_SPEND,
 };
 
+// Inlined at build time. When Firebase isn't configured (no .env.local),
+// fall back to polling the in-memory ledger via /api/state.
+const HAS_FIRESTORE = Boolean(
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+);
+
 function reasonToMessage(reason: string | undefined, mode: TerminalMode): string {
   if (reason === "unknown_uid") return "Unknown card — tap a registered demo card.";
   if (reason === "wrong_card") {
@@ -55,20 +62,35 @@ export default function Dashboard() {
 
   const accountsRef = useRef<Account[]>(accounts);
 
-  useEffect(() => {
-    const unsubAccounts = subscribeAccounts((next) => {
-      const prior = Object.fromEntries(accountsRef.current.map((a) => [a.id, a.balance]));
-      setPreviousBalances(prior);
-      setAccounts(next);
-      accountsRef.current = next;
-    });
-    const unsubTerminal = subscribeTerminal((state) => setTerminal(state));
-
-    return () => {
-      unsubAccounts();
-      unsubTerminal();
-    };
+  const applyAccounts = useCallback((next: Account[]) => {
+    const prior = Object.fromEntries(accountsRef.current.map((a) => [a.id, a.balance]));
+    setPreviousBalances(prior);
+    setAccounts(next);
+    accountsRef.current = next;
   }, []);
+
+  const refreshFromApi = useCallback(async () => {
+    const res = await fetch("/api/state");
+    const data = await res.json();
+    applyAccounts(data.accounts);
+    setTerminal(data.terminal);
+  }, [applyAccounts]);
+
+  useEffect(() => {
+    if (HAS_FIRESTORE) {
+      const unsubAccounts = subscribeAccounts(applyAccounts);
+      const unsubTerminal = subscribeTerminal((state) => setTerminal(state));
+      return () => {
+        unsubAccounts();
+        unsubTerminal();
+      };
+    }
+
+    // Memory backend: initial load + poll so bridge/hardware taps show up.
+    void refreshFromApi();
+    const interval = window.setInterval(() => void refreshFromApi(), 3000);
+    return () => window.clearInterval(interval);
+  }, [applyAccounts, refreshFromApi]);
 
   const flashAccounts = useCallback((ids: string[]) => {
     setHighlightIds(ids);
@@ -112,10 +134,14 @@ export default function Dashboard() {
         setFeePayload(null);
       }
 
+      if (!HAS_FIRESTORE) {
+        void refreshFromApi();
+      }
+
       setWaiting(false);
       window.setTimeout(() => setWaiting(true), 400);
     },
-    [terminal.mode, flashAccounts]
+    [terminal.mode, flashAccounts, refreshFromApi]
   );
 
   const clearSplit = useCallback(() => setSplitPayload(null), []);
@@ -129,7 +155,15 @@ export default function Dashboard() {
     const next = { ...terminal, ...patch };
     setTerminal(next);
     setWaiting(true);
-    void setTerminalState(next);
+    if (HAS_FIRESTORE) {
+      void setTerminalState(next);
+    } else {
+      void fetch("/api/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ terminal: next }),
+      });
+    }
   }
 
   async function handleReset() {
@@ -138,6 +172,9 @@ export default function Dashboard() {
     setSplitPayload(null);
     setFeePayload(null);
     setWaiting(true);
+    if (!HAS_FIRESTORE) {
+      void refreshFromApi();
+    }
   }
 
   // Physical reader / curl → bridge WS → same handleTap as SimulateBar

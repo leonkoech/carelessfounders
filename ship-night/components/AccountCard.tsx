@@ -73,7 +73,7 @@ export default function AccountCard({
       </p>
       <h3 className="mt-1 text-lg font-semibold text-white">{account.name}</h3>
       <p
-        className={`mt-4 truncate font-mono text-2xl font-bold tabular-nums sm:text-3xl 2xl:text-4xl ${
+        className={`mt-4 truncate font-mono text-2xl font-bold tabular-nums sm:text-3xl xl:text-2xl 2xl:text-3xl ${
           changed ? "text-emerald-300" : "text-white"
         }`}
       >

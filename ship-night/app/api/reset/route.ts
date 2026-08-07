@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { resetAccounts } from "@/lib/firestoreLedger";
+import { reset } from "@/lib/serverLedger";
 
 export async function POST() {
-  await resetAccounts();
+  await reset();
   return NextResponse.json({ ok: true });
 }
