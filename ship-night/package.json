@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "bridge": "node bridge/server.js",
-    "solana-setup": "tsx scripts/solana-setup.ts"
+    "solana-setup": "tsx scripts/solana-setup.ts",
+    "reader": "../.venv-esp/bin/python ../firmware/pn532_usb_read.py --post --log ../firmware/taps.log"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.15",
@@ -18,7 +19,8 @@
     "firebase": "^12.17.1",
     "next": "16.3.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -30,7 +32,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.9",
     "typescript": "^5",
-    "vitest": "^3",
-    "ws": "^8.21.2"
+    "vitest": "^3"
   }
 }

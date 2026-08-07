@@ -14,7 +14,7 @@ import {
   subscribeTerminal,
   type TerminalState,
 } from "@/lib/firestoreLedger";
-import { simulateTap } from "@/lib/tapSource";
+import { connectTapBridge, simulateTap } from "@/lib/tapSource";
 
 type SplitPayload = { total: number; merchantAmount: number; tipAmount: number };
 type FeePayload = { ourFee: number; squareFee: number; amount: number };
@@ -132,6 +132,12 @@ export default function Home() {
     setFeePayload(null);
     setWaiting(true);
   }
+
+  // Physical reader / curl → bridge WS → same handleTap as SimulateBar
+  useEffect(() => {
+    const bridge = connectTapBridge(handleTap);
+    return () => bridge.close();
+  }, [handleTap]);
 
   return (
     <div className="min-h-full bg-zinc-950 text-white">

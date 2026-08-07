@@ -109,10 +109,10 @@ def read_uid(ser: serial.Serial) -> str | None:
     return resp[8 : 8 + nfcid_len].hex().upper()
 
 
-def post_tap(uid: str, log: Logger) -> None:
-    body = json.dumps({"uid": uid, "source": "esp32"}).encode()
+def post_tap(uid: str, log: Logger, bridge_url: str) -> None:
+    body = json.dumps({"uid": uid, "source": "reader"}).encode()
     req = urllib.request.Request(
-        "http://127.0.0.1:7071/tap",
+        bridge_url,
         data=body,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -128,7 +128,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", default=PORT)
     ap.add_argument("--once", action="store_true")
-    ap.add_argument("--post", action="store_true")
+    ap.add_argument(
+        "--post",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="POST taps to bridge (default on; use --no-post for log-only)",
+    )
+    ap.add_argument(
+        "--bridge",
+        default="http://127.0.0.1:7071/tap",
+        help="bridge POST URL",
+    )
     ap.add_argument("--log", default=DEFAULT_LOG, help="realtime log file path")
     ap.add_argument("--no-log", action="store_true")
     args = ap.parse_args()
@@ -151,7 +161,7 @@ def main() -> int:
             if uid and (uid != last or now - last_t > 1.0):
                 log.log(f"UID: {uid}")
                 if args.post:
-                    post_tap(uid, log)
+                    post_tap(uid, log, args.bridge)
                 last, last_t = uid, now
                 if args.once:
                     return 0
