@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Account } from "@/lib/prototype/accounts";
+import type { Account } from "@/lib/accounts";
 
 type AccountCardProps = {
   account: Account;
