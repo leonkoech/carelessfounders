@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "smoke": "node scripts/integration-smoke.js",
     "bridge": "node bridge/server.js",
-    "reader": "../.venv-esp/bin/python ../firmware/pn532_usb_read.py --post --log ../firmware/taps.log"
+    "reader": "../../.venv-esp/bin/python ../firmware/pn532_usb_read.py --post --log ../firmware/taps.log"
   },
   "dependencies": {
     "next": "16.3.0",
