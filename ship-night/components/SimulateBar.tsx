@@ -14,8 +14,8 @@ export default function SimulateBar({
   const tappable = accounts.filter((account) => account.uid);
 
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-600 bg-zinc-950/60 p-5">
-      <p className="mb-4 text-sm font-medium uppercase tracking-wide text-zinc-500">
+    <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-5">
+      <p className="mb-4 text-xs font-medium uppercase tracking-wide text-zinc-500">
         Simulate tap (no hardware needed)
       </p>
       <div className="flex flex-wrap gap-3">
@@ -24,7 +24,7 @@ export default function SimulateBar({
             key={account.id}
             type="button"
             onClick={() => onSimulateTap(account.uid!)}
-            className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 active:scale-[0.98]"
+            className="rounded-full bg-[#ff2f00] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#e62a00] active:scale-[0.98]"
           >
             Simulate: {account.name} taps
           </button>

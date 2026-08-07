@@ -32,7 +32,7 @@ export default function Terminal({
   waiting,
 }: TerminalProps) {
   return (
-    <div className="rounded-2xl border border-zinc-700 bg-zinc-900/90 p-6">
+    <div className="rounded-3xl bg-white p-6 shadow-xl shadow-orange-950/5 ring-1 ring-black/5">
       <div className="flex flex-wrap gap-2">
         {MODES.map(({ id, label }) => (
           <button
@@ -41,8 +41,8 @@ export default function Terminal({
             onClick={() => onModeChange(id)}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
               mode === id
-                ? "bg-white text-black"
-                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                ? "bg-[#121111] text-white"
+                : "border border-zinc-300 text-zinc-600 hover:bg-white"
             }`}
           >
             {label}
@@ -54,25 +54,25 @@ export default function Terminal({
         {mode === "charge" && (
           <>
             <label className="block">
-              <span className="text-sm text-zinc-400">Bill total</span>
+              <span className="text-sm text-zinc-600">Bill total</span>
               <input
                 type="number"
                 min={0}
                 step={1}
                 value={total}
                 onChange={(event) => onTotalChange(Number(event.target.value))}
-                className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-950 px-4 py-3 text-2xl font-semibold text-white"
+                className="mt-1 w-full rounded-[14px] border border-zinc-200 bg-[#fffaf5] px-4 py-3 text-2xl font-semibold text-[#121111] outline-none ring-[#ff2f00]/40 focus:ring-2"
               />
             </label>
             <label className="block">
-              <span className="text-sm text-zinc-400">Tip</span>
+              <span className="text-sm text-zinc-600">Tip</span>
               <input
                 type="number"
                 min={0}
                 step={1}
                 value={tip}
                 onChange={(event) => onTipChange(Number(event.target.value))}
-                className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-950 px-4 py-3 text-2xl font-semibold text-white"
+                className="mt-1 w-full rounded-[14px] border border-zinc-200 bg-[#fffaf5] px-4 py-3 text-2xl font-semibold text-[#121111] outline-none ring-[#ff2f00]/40 focus:ring-2"
               />
             </label>
           </>
@@ -80,20 +80,20 @@ export default function Terminal({
 
         {mode === "spend" && (
           <label className="block sm:col-span-2">
-            <span className="text-sm text-zinc-400">Spend amount</span>
+            <span className="text-sm text-zinc-600">Spend amount</span>
             <input
               type="number"
               min={0}
               step={1}
               value={amount}
               onChange={(event) => onAmountChange(Number(event.target.value))}
-              className="mt-1 w-full rounded-xl border border-zinc-600 bg-zinc-950 px-4 py-3 text-2xl font-semibold text-white"
+              className="mt-1 w-full rounded-[14px] border border-zinc-200 bg-[#fffaf5] px-4 py-3 text-2xl font-semibold text-[#121111] outline-none ring-[#ff2f00]/40 focus:ring-2"
             />
           </label>
         )}
 
         {mode === "cashout" && (
-          <p className="sm:col-span-2 text-lg text-zinc-300">
+          <p className="sm:col-span-2 text-lg text-zinc-600">
             Worker taps to cash out their full balance at the agent.
           </p>
         )}
@@ -102,8 +102,8 @@ export default function Terminal({
       <div
         className={`mt-6 rounded-xl px-4 py-3 text-center text-lg font-medium ${
           waiting
-            ? "animate-pulse bg-amber-500/20 text-amber-200"
-            : "bg-zinc-800 text-zinc-400"
+            ? "animate-pulse border border-amber-300 bg-amber-50 text-amber-700"
+            : "border border-zinc-200 bg-[#fffaf5] text-zinc-500"
         }`}
       >
         {waiting ? "Waiting for tap…" : "Adjust amounts or mode to arm terminal"}

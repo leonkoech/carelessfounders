@@ -63,10 +63,13 @@ export default function Dashboard() {
   const accountsRef = useRef<Account[]>(accounts);
 
   const applyAccounts = useCallback((next: Account[]) => {
+    // Firestore returns docs alphabetically; keep the demo's narrative order.
+    const order = ["customer", "restaurant", "maria", "tacostand", "agent"];
+    const sorted = [...next].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     const prior = Object.fromEntries(accountsRef.current.map((a) => [a.id, a.balance]));
     setPreviousBalances(prior);
-    setAccounts(next);
-    accountsRef.current = next;
+    setAccounts(sorted);
+    accountsRef.current = sorted;
   }, []);
 
   const refreshFromApi = useCallback(async () => {
@@ -184,23 +187,23 @@ export default function Dashboard() {
   }, [handleTap]);
 
   return (
-    <div className="min-h-full flex-1 bg-zinc-950 text-white">
+    <div className="min-h-full flex-1 bg-[#fffaf5] text-[#121111]">
       <PortalHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#ff2f00]">
               Loop · Portal
             </p>
             <h1 className="text-3xl font-bold sm:text-4xl">Tap-to-pay demo dashboard</h1>
-            <p className="max-w-2xl text-zinc-400">
+            <p className="max-w-2xl text-zinc-600">
               Simulate card taps to move money — dollars enter once and circulate at ~$0.01 a hop.
             </p>
           </div>
           <button
             type="button"
             onClick={handleReset}
-            className="shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+            className="shrink-0 rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-600 transition hover:bg-white"
           >
             Reset
           </button>
@@ -244,7 +247,7 @@ export default function Dashboard() {
             )}
 
             {message && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100">
+              <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-700">
                 {message}
               </div>
             )}

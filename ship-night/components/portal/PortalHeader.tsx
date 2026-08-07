@@ -14,18 +14,18 @@ export default function PortalHeader() {
   }
 
   return (
-    <div className="border-b border-zinc-800 bg-zinc-950/80">
+    <div className="border-b border-black/5 bg-[#fffaf5]/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="inline-flex items-center">
           <LoopLogo
             size={26}
-            wordmarkClassName="text-base font-semibold tracking-tight text-white"
+            wordmarkClassName="text-base font-semibold tracking-tight text-[#121111]"
           />
         </Link>
         <button
           type="button"
           onClick={handleSignOut}
-          className="text-sm text-zinc-500 transition hover:text-zinc-300"
+          className="text-sm text-zinc-500 transition hover:text-[#121111]"
         >
           Sign out
         </button>

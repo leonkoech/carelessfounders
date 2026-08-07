@@ -62,19 +62,19 @@ export default function AccountCard({
 
   return (
     <div
-      className={`rounded-2xl border p-5 transition-all duration-300 ${
+      className={`rounded-2xl p-5 transition-all duration-300 ${
         highlight || changed
-          ? "border-emerald-400 bg-emerald-950/40 shadow-lg shadow-emerald-500/20"
-          : "border-zinc-700 bg-zinc-900/80"
+          ? "ring-2 ring-[#ff2f00] bg-[#ff2f00]/5 shadow-lg shadow-orange-500/10"
+          : "bg-white ring-1 ring-black/5 shadow-sm"
       }`}
     >
-      <p className="text-sm font-medium uppercase tracking-wide text-zinc-400">
+      <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
         {account.role}
       </p>
-      <h3 className="mt-1 text-lg font-semibold text-white">{account.name}</h3>
+      <h3 className="mt-1 text-lg font-semibold text-[#121111]">{account.name}</h3>
       <p
         className={`mt-4 truncate font-mono text-2xl font-bold tabular-nums sm:text-3xl xl:text-2xl 2xl:text-3xl ${
-          changed ? "text-emerald-300" : "text-white"
+          changed ? "text-[#ff2f00]" : "text-[#121111]"
         }`}
       >
         {formatMoney(displayBalance)}
