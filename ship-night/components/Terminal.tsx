@@ -1,6 +1,6 @@
 "use client";
 
-import type { TerminalMode } from "@/lib/tapSource";
+export type TerminalMode = "charge" | "spend" | "cashout";
 
 type TerminalProps = {
   mode: TerminalMode;

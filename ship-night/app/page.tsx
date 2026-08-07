@@ -1,31 +1,39 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import AccountCard from "@/components/AccountCard";
 import FeeLine from "@/components/FeeLine";
 import SimulateBar from "@/components/SimulateBar";
 import { SolanaPanel } from "@/components/SolanaPanel";
 import SplitAnimation from "@/components/SplitAnimation";
-import Terminal from "@/components/Terminal";
-import { DEMO_BILL_TOTAL, DEMO_SPEND, DEMO_TIP, type Account } from "@/lib/accounts";
-import { simulateTap, type TerminalMode } from "@/lib/tapSource";
+import Terminal, { type TerminalMode } from "@/components/Terminal";
+import {
+  DEMO_BILL_TOTAL,
+  DEMO_SPEND,
+  DEMO_TIP,
+  UID_MAP,
+  type Account,
+} from "@/lib/accounts";
+import { cashOut, getState, payBill, reset, spend } from "@/lib/ledger";
+import { simulateTap } from "@/lib/tapSource";
 
-type SplitPayload = { total: number; merchantAmount: number; tipAmount: number };
-type FeePayload = { ourFee: number; squareFee: number; amount: number };
+type SplitPayload = {
+  total: number;
+  merchantAmount: number;
+  tipAmount: number;
+};
 
-function reasonToMessage(reason: string | undefined, mode: TerminalMode): string {
-  if (reason === "unknown_uid") return "Unknown card — tap a registered demo card.";
-  if (reason === "wrong_card") {
-    if (mode === "charge") return "Charge Bill: tap the Customer card.";
-    if (mode === "spend") return "Spend: tap Maria's card.";
-    return "Cash Out: tap Maria's card.";
-  }
-  return reason ?? "Transaction failed.";
-}
+type FeePayload = {
+  ourFee: number;
+  squareFee: number;
+  amount: number;
+};
 
 export default function Home() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [previousBalances, setPreviousBalances] = useState<Record<string, number>>({});
+  const [accounts, setAccounts] = useState<Account[]>(() => getState());
+  const [previousBalances, setPreviousBalances] = useState<
+    Record<string, number>
+  >({});
   const [highlightIds, setHighlightIds] = useState<string[]>([]);
   const [mode, setMode] = useState<TerminalMode>("charge");
   const [total, setTotal] = useState(DEMO_BILL_TOTAL);
@@ -36,16 +44,17 @@ export default function Home() {
   const [splitPayload, setSplitPayload] = useState<SplitPayload | null>(null);
   const [feePayload, setFeePayload] = useState<FeePayload | null>(null);
 
-  const accountsRef = useRef<Account[]>(accounts);
+  const accountsRef = useRef(accounts);
   accountsRef.current = accounts;
 
-  useEffect(() => {
-    fetch("/api/state")
-      .then((r) => r.json())
-      .then((d) => {
-        setAccounts(d.accounts);
-        accountsRef.current = d.accounts;
-      });
+  const refreshAccounts = useCallback(() => {
+    const prior = Object.fromEntries(
+      accountsRef.current.map((a) => [a.id, a.balance])
+    );
+    const next = getState();
+    setPreviousBalances(prior);
+    setAccounts(next);
+    accountsRef.current = next;
   }, []);
 
   const flashAccounts = useCallback((ids: string[]) => {
@@ -54,62 +63,85 @@ export default function Home() {
   }, []);
 
   const handleTap = useCallback(
-    async (uid: string) => {
-      setMessage(null);
-      const prior = Object.fromEntries(accountsRef.current.map((a) => [a.id, a.balance]));
-
-      const res = await fetch("/api/tap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid, mode, total, tip, amount }),
-      });
-      const data = await res.json();
-      setAccounts(data.accounts);
-      accountsRef.current = data.accounts;
-
-      if (!data.ok) {
-        setMessage(reasonToMessage(data.reason, mode));
+    (uid: string) => {
+      const accountId = UID_MAP[uid];
+      if (!accountId) {
+        setMessage("Unknown card — tap a registered demo card.");
         return;
       }
 
-      setPreviousBalances(prior);
+      setMessage(null);
+      setSplitPayload(null);
 
-      if (mode === "charge") {
-        flashAccounts(["customer", "restaurant", "maria"]);
-        setSplitPayload({
-          total: data.result.breakdown.food + data.result.breakdown.tip,
-          merchantAmount: data.result.breakdown.food,
-          tipAmount: data.result.breakdown.tip,
-        });
-      } else if (mode === "spend") {
-        flashAccounts(["maria", "tacostand"]);
-        setFeePayload({
-          ourFee: data.result.ourFee,
-          squareFee: data.result.squareFee,
-          amount: data.result.amount,
-        });
-      } else {
-        flashAccounts(["maria", "agent"]);
+      try {
+        if (mode === "charge") {
+          if (accountId !== "customer") {
+            setMessage("Charge Bill: tap the Customer card.");
+            return;
+          }
+
+          const result = payBill("customer", "restaurant", total, tip, "maria");
+          refreshAccounts();
+          flashAccounts(["customer", "restaurant", "maria"]);
+          setFeePayload(null);
+          setSplitPayload({
+            total,
+            merchantAmount: result.merchantCredited,
+            tipAmount: result.tipCredited,
+          });
+        } else if (mode === "spend") {
+          if (accountId !== "maria") {
+            setMessage("Spend: tap Maria's card.");
+            return;
+          }
+
+          const result = spend("maria", "tacostand", amount);
+          refreshAccounts();
+          flashAccounts(["maria", "tacostand"]);
+          setFeePayload({
+            ourFee: result.ourFee,
+            squareFee: result.squareFee,
+            amount: result.amount,
+          });
+        } else {
+          if (accountId !== "maria") {
+            setMessage("Cash Out: tap Maria's card.");
+            return;
+          }
+
+          cashOut("maria");
+          refreshAccounts();
+          flashAccounts(["maria", "agent"]);
+          setFeePayload(null);
+        }
+
+        setWaiting(false);
+        window.setTimeout(() => setWaiting(true), 400);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Transaction failed.");
       }
-
-      setWaiting(false);
-      window.setTimeout(() => setWaiting(true), 400);
     },
-    [mode, total, tip, amount, flashAccounts]
+    [amount, flashAccounts, mode, refreshAccounts, tip, total]
   );
 
-  const onSimulateTap = useCallback((uid: string) => simulateTap(uid, handleTap), [handleTap]);
+  const clearSplit = useCallback(() => setSplitPayload(null), []);
 
-  async function handleReset() {
-    const res = await fetch("/api/reset", { method: "POST" });
-    const data = await res.json();
-    setAccounts(data.accounts);
-    accountsRef.current = data.accounts;
+  const onSimulateTap = useCallback(
+    (uid: string) => simulateTap(uid, handleTap),
+    [handleTap]
+  );
+
+  function handleReset() {
+    reset();
+    const next = getState();
+    setAccounts(next);
+    accountsRef.current = next;
     setPreviousBalances({});
     setHighlightIds([]);
     setMessage(null);
     setSplitPayload(null);
     setFeePayload(null);
+    setWaiting(true);
   }
 
   return (
@@ -151,6 +183,7 @@ export default function Home() {
             onModeChange={(nextMode) => {
               setMode(nextMode);
               setMessage(null);
+              setFeePayload(null);
               setWaiting(true);
             }}
             total={total}
@@ -171,20 +204,22 @@ export default function Home() {
             waiting={waiting}
           />
 
-          {message && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100">
-              {message}
-            </div>
-          )}
-        </section>
+          <div className="space-y-4">
+            {feePayload && (
+              <FeeLine
+                ourFee={feePayload.ourFee}
+                squareFee={feePayload.squareFee}
+                amount={feePayload.amount}
+              />
+            )}
 
-        {feePayload && (
-          <FeeLine
-            ourFee={feePayload.ourFee}
-            squareFee={feePayload.squareFee}
-            amount={feePayload.amount}
-          />
-        )}
+            {message && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100">
+                {message}
+              </div>
+            )}
+          </div>
+        </section>
 
         <SimulateBar accounts={accounts} onSimulateTap={onSimulateTap} />
 
@@ -196,7 +231,7 @@ export default function Home() {
           total={splitPayload.total}
           merchantAmount={splitPayload.merchantAmount}
           tipAmount={splitPayload.tipAmount}
-          onComplete={() => setSplitPayload(null)}
+          onComplete={clearSplit}
         />
       )}
     </div>
